@@ -1,7 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 from youtube_transcript_api import YouTubeTranscriptApi
-
+st.set_page_config(page_title="Yt video summarizer", page_icon="📝")
 st.markdown("""
     <style>
         .header {
@@ -46,25 +46,27 @@ def generate_gemini_content(transcript, prompt):
 
 def extract_transcript(video_id):
     """Extracts the transcript from a YouTube video."""
-    transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-    for transcript in transcript_list:
-      transcript_text_list = transcript.fetch()
-    #   st.write("transcript_text_list", transcript_text_list)
-      lang = transcript.language
-      transcript_text = ""
-      if transcript.language_code =='en':
-        st.write('lang is en')
-        for line in transcript_text_list:
-            transcript_text += " " + line["text"]
-        return transcript_text
-      elif transcript.is_translatable:
-        english_transcript_list = transcript.translate('en').fetch()
-        for line in english_transcript_list:
-            transcript_text += " " + line["text"]
-        return transcript_text
+    try:
+        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        for transcript in transcript_list:
+            transcript_text_list = transcript.fetch()
+            lang = transcript.language
+            transcript_text = ""
+            if transcript.language_code == 'en':
+                for line in transcript_text_list:
+                    transcript_text += " " + line["text"]
+                return transcript_text
+            elif transcript.is_translatable:
+                english_transcript_list = transcript.translate('en').fetch()
+                for line in english_transcript_list:
+                    transcript_text += " " + line["text"]
+                return transcript_text
+        st.info("Transcript extraction failed. Please check the video URL.")
+    except Exception as e:
+        st.info(f"Error: {e}")
+
 
          
-    
 st.markdown("<p style='{}'>➡️created by 'Muhammad Zain Attiq'</p>".format(created_style), unsafe_allow_html=True)
 st.markdown('<h1 class="header">Youtube Video Summarizer </h1>', unsafe_allow_html=True)
 with st.expander("About the app..."):
@@ -92,7 +94,8 @@ if submit:
     with st.spinner("Extracting Transcript..."):
         transcript = extract_transcript(video_id)
     if transcript:
-        summary = generate_gemini_content(transcript, prompt)
+        with st.spinner("Generating Summary..."):
+            summary = generate_gemini_content(transcript, prompt)
         st.markdown('<h1 class="response">Summary: </h1>', unsafe_allow_html=True)
         st.write(summary)
         st.write("__________________________________________________________________________________")
